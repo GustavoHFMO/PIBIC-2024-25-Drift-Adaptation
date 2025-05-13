@@ -1,0 +1,17 @@
+Drift-Detection-PIBIC/
+
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.pyc
+parametros_otimizados.json
+
+# Ignorar arquivos de imagem PNG
+*.png
+
+# Ignorar arquivos CSV
+#*.csv
+
+venv/
+
+.venv/
