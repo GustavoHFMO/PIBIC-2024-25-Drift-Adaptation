@@ -9,7 +9,7 @@ class DriftEvaluator:
     """
     
     @staticmethod
-    def inicializar_modelos(modelo_classe, detector_classe):
+    def inicializar_modelos(modelo_classe, detector_classe, seed):
         """
         Inicializa instâncias de modelo e detector.
 
@@ -24,7 +24,7 @@ class DriftEvaluator:
         modelo_instancia = copy.copy(modelo_classe())
         
         # Instancia o detector com os parâmetros fornecidos
-        detector_instancia = copy.copy(detector_classe())
+        detector_instancia = copy.copy(detector_classe(seed=seed))
 
         return modelo_instancia, detector_instancia
 
@@ -50,7 +50,7 @@ class DriftEvaluator:
         return erro_medio
         
     @staticmethod        
-    def prequential_batch(X, Y, tamanho_batch, modelo_classe, detector_classe):
+    def prequential_batch(X, Y, tamanho_batch, modelo_classe, detector_classe, seed):
         """
         Realiza a previsão de valores continuamente, detectando mudanças nos dados (drift)
         e retreinando o modelo quando necessário.
@@ -72,7 +72,7 @@ class DriftEvaluator:
 
 
         ### inicializacao do modelo e detector
-        modelo, detector = DriftEvaluator.inicializar_modelos(modelo_classe, detector_classe)
+        modelo, detector = DriftEvaluator.inicializar_modelos(modelo_classe, detector_classe, seed)
         detector.atualizar(DriftEvaluator.treinamento_modelo_batch(modelo, X[:tamanho_batch], Y[:tamanho_batch]))
         
         
@@ -119,7 +119,7 @@ class DriftEvaluator:
                     drift_ativo = False
 
                     # realizando o reset do modelo e do detector
-                    modelo, detector = DriftEvaluator.inicializar_modelos(modelo_classe, detector_classe)
+                    modelo, detector = DriftEvaluator.inicializar_modelos(modelo_classe, detector_classe, seed)
                     erro_inicial = DriftEvaluator.treinamento_modelo_batch(modelo, np.array(janela_X), np.array(janela_y))
                     detector.atualizar(erro_inicial)
 
