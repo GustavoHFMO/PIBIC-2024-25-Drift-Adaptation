@@ -6,12 +6,10 @@ import numpy as np
 import copy
 
 class WinKS(AvaliadorDriftBase):
-    def __init__(self, modelo_classe, modelo_online_classe, detector_classe, n_janelas=4, alpha=0.05):
+    def __init__(self, modelo_classe, detector_classe, incremental=False):
         self.modelo_classe = modelo_classe
-        self.modelo_online_classe = modelo_online_classe
         self.detector_classe = detector_classe
-        self.n_janelas = n_janelas
-        self.alpha = alpha
+        self.incremental = incremental
                     
     def inicializar_modelos(self, X, y, seed):
                 
@@ -44,64 +42,10 @@ class WinKS(AvaliadorDriftBase):
         # Treinamento do modelo usando o método 'treinar' da subclasse
         self.modelo_atual.treinar(X, y)
         ###############################################################################
-           
-    def inicializar_janelas(self, X, y):
-        self.fixed_window_X = copy.copy(X)
-        self.fixed_window_y = copy.copy(y)
-        
-        self.sliding_window_X = copy.copy(X)
-        self.sliding_window_y = copy.copy(y)
-        
-        self.increment_window_X = []
-        self.increment_window_y = []
-    
-    def atualizar_janela_incremental(self, X, y):
-        self.increment_window_X = copy.copy(X)
-        self.increment_window_y = copy.copy(y)
-        
-    def deslizar_janela(self, x, y):
-        self.sliding_window_X = np.delete(self.sliding_window_X, 0, axis=0)
-        self.sliding_window_y = np.delete(self.sliding_window_y, 0, axis=0)
-        
-        self.sliding_window_X = np.append(self.sliding_window_X, [x], axis=0)
-        self.sliding_window_y = np.append(self.sliding_window_y, [y], axis=0)
             
     def incrementar_janela(self, x, y):
-        self.increment_window_X = np.append(self.increment_window_X, [x], axis=0)
-        self.increment_window_y = np.append(self.increment_window_y, [y], axis=0)
-        #self.increment_window_X.append(x)
-        #self.increment_window_y.append(y)
-
-    def comparar_janelas_temporais(self, X, y):
-        
-        # definindo a quantidade de subjanelas
-        tamanho = len(y)
-        parte = tamanho // self.n_janelas
-        
-        # separando os dados em subjanelas
-        janelas_y = [y[i*parte:(i+1)*parte] for i in range(self.n_janelas)]
-        janelas_X = [X[i*parte:(i+1)*parte] for i in range(self.n_janelas)]
-        
-        # definindo a última janela como parâmetro 
-        ultima_y = janelas_y[-1]
-        ultima_X = janelas_X[-1]
-        
-        # variável para salvar os dados similares
-        similares_y = [ultima_y]
-        similares_X = [ultima_X]
-        
-        # comparacao da ultima_y janela com as mais antigas
-        for i in reversed(range(self.n_janelas - 1)):
-            
-            # comparacao
-            _, p = ks_2samp(janelas_y[i], ultima_y)
-            
-            if p >= self.alpha:
-                similares_y.insert(0, janelas_y[i])
-                similares_X.insert(0, janelas_X[i])
-            else:
-                break
-        return np.concatenate(similares_X), np.concatenate(similares_y)
+        self.increment_window_X.append(x)
+        self.increment_window_y.append(y)
 
     def prequential(self, X, Y, tamanho_batch, model_classe=None, detect_classe=None, seed=None):
         """
@@ -125,8 +69,9 @@ class WinKS(AvaliadorDriftBase):
 
         # inicializacao do modelo
         self.inicializar_modelos(X[:tamanho_batch], Y[:tamanho_batch], seed)
-        self.inicializar_janelas(X[:tamanho_batch], Y[:tamanho_batch])
-                
+        self.increment_window_X = []
+        self.increment_window_y = []
+        
         ### variavel de controle
         drift_ativo = False
 
@@ -147,32 +92,27 @@ class WinKS(AvaliadorDriftBase):
             if not drift_ativo:
                 # atualizando o detector para cada nova predicao
                 self.detector_atual.atualizar(erro)
-                # deslizando a janela sobre os dados
-                self.deslizar_janela(X[i], Y[i])
 
             # verificando se tem drift
             if self.detector_atual.drift_detectado() and not drift_ativo:
-                                
-                deteccoes.append(i)
-                
-                X_new, y_new = self.comparar_janelas_temporais(self.sliding_window_X, self.sliding_window_y)           
-                self.atualizar_janela_incremental(X_new, y_new)
-                self.inicializar_modelo_rapido(self.sliding_window_X, self.sliding_window_y)
-                
-                print(i, "-", len(X_new))
-                
+                deteccoes.append(i)                
                 drift_ativo = True
         
             # ativando a estrategia de adaptacao ao drift
             if drift_ativo:
                         
                 self.incrementar_janela(X[i], Y[i])
-                self.modelo_atual.treinar([X[i]], [Y[i]])
+                
+                if(self.incremental):
+                    self.modelo_atual.treinar(self.increment_window_X, self.increment_window_y)
+                else:
+                    self.modelo_atual.treinar([X[i]], [Y[i]])    
                 
                 # resetando o modelo apos o preenchimento do batch
                 if(len(self.increment_window_X) >= tamanho_batch):
                     self.inicializar_modelos(self.increment_window_X, self.increment_window_y, seed)
-                    self.inicializar_janelas(self.increment_window_X, self.increment_window_y)
+                    self.increment_window_X = []
+                    self.increment_window_y = []
                     drift_ativo = False            
                               
         return predicoes, deteccoes, mae.get()
