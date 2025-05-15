@@ -6,8 +6,9 @@ import numpy as np
 import copy
 
 class WinKS(AvaliadorDriftBase):
-    def __init__(self, modelo_classe, detector_classe, n_janelas=4, alpha=0.05):
+    def __init__(self, modelo_classe, modelo_online_classe, detector_classe, n_janelas=4, alpha=0.05):
         self.modelo_classe = modelo_classe
+        self.modelo_online_classe = modelo_online_classe
         self.detector_classe = detector_classe
         self.n_janelas = n_janelas
         self.alpha = alpha
@@ -38,7 +39,7 @@ class WinKS(AvaliadorDriftBase):
                 
         ######################## inicializando o regressor ###########################
         # Instancia o modelo com os parâmetros fornecidos
-        self.modelo_atual = copy.copy(self.modelo_classe())
+        self.modelo_atual = copy.copy(self.modelo_online_classe())
         
         # Treinamento do modelo usando o método 'treinar' da subclasse
         self.modelo_atual.treinar(X, y)
@@ -68,6 +69,8 @@ class WinKS(AvaliadorDriftBase):
     def incrementar_janela(self, x, y):
         self.increment_window_X = np.append(self.increment_window_X, [x], axis=0)
         self.increment_window_y = np.append(self.increment_window_y, [y], axis=0)
+        #self.increment_window_X.append(x)
+        #self.increment_window_y.append(y)
 
     def comparar_janelas_temporais(self, X, y):
         
@@ -136,7 +139,7 @@ class WinKS(AvaliadorDriftBase):
             erro = mean_absolute_error(Y[i], y_pred)
 
             # salvando os resultados
-            predicoes.append(y_pred)
+            predicoes.append(float(np.array(y_pred).flatten()[0]))
             erros.append(erro)
             mae.update(Y[i][0], y_pred[0])
 
@@ -154,9 +157,9 @@ class WinKS(AvaliadorDriftBase):
                 
                 X_new, y_new = self.comparar_janelas_temporais(self.sliding_window_X, self.sliding_window_y)           
                 self.atualizar_janela_incremental(X_new, y_new)
+                self.inicializar_modelo_rapido(self.sliding_window_X, self.sliding_window_y)
                 
                 print(i, "-", len(X_new))
-                
                 
                 drift_ativo = True
         
@@ -164,6 +167,7 @@ class WinKS(AvaliadorDriftBase):
             if drift_ativo:
                         
                 self.incrementar_janela(X[i], Y[i])
+                self.modelo_atual.treinar([X[i]], [Y[i]])
                 
                 # resetando o modelo apos o preenchimento do batch
                 if(len(self.increment_window_X) >= tamanho_batch):
@@ -171,7 +175,5 @@ class WinKS(AvaliadorDriftBase):
                     self.inicializar_janelas(self.increment_window_X, self.increment_window_y)
                     drift_ativo = False            
                               
-                
-          
-        return [float(p.flatten()[0]) for p in predicoes], deteccoes, mae.get()
+        return predicoes, deteccoes, mae.get()
     

@@ -180,7 +180,7 @@ class DriftEvaluator:
         return [float(p.flatten()[0]) for p in np.asarray(predicoes)], mae.get()
         
     @staticmethod
-    def prequential_online_com_drift(X, Y, tamanho_batch, modelo_classe, detector_classe):
+    def prequential_online_com_drift(X, Y, tamanho_batch, modelo_classe, detector_classe, seed):
         """
         Realiza a previsão de valores continuamente para algoritmos online,
         sem detecção de drift e retreinamento.
@@ -200,7 +200,7 @@ class DriftEvaluator:
         mae = metrics.MAE()
 
         # inicializacao do modelo
-        modelo, detector = DriftEvaluator.inicializar_modelos(modelo_classe, detector_classe)
+        modelo, detector = DriftEvaluator.inicializar_modelos(modelo_classe, detector_classe, seed)
         detector.atualizar(DriftEvaluator.treinamento_modelo_batch(modelo, X[:tamanho_batch], Y[:tamanho_batch]))
         
         # Controle de janela de atualização após drift
