@@ -5,7 +5,7 @@ from river import metrics
 import numpy as np
 import copy
 
-class WinKS(AvaliadorDriftBase):
+class LOR(AvaliadorDriftBase):
     def __init__(self, modelo_classe, detector_classe, incremental=False):
         self.modelo_classe = modelo_classe
         self.detector_classe = detector_classe
