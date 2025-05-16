@@ -5,13 +5,14 @@ import numpy as np
 import copy
 
 class OASIS(AvaliadorDriftBase):
-    def __init__(self, modelo_classe, detector_classe, len_pool, len_add):
+    def __init__(self, modelo_classe, detector_classe, len_pool, len_add, pool_exclusion="performance"):
         self.modelo_classe = modelo_classe
         self.detector_classe = detector_classe
         self.len_pool = len_pool
         self.len_add = len_add
+        self.pool_exclusion = pool_exclusion
 
-    def inicializar_modelos(self, X, y):
+    def inicializar_modelos(self, X, y, seed):
         """
         Inicializa instâncias de modelo e detector.
 
@@ -40,7 +41,7 @@ class OASIS(AvaliadorDriftBase):
 
         ######################## inicializando o detector #############################
         # Instancia o detector com os parâmetros fornecidos
-        self.detector_atual = copy.copy(self.detector_classe())
+        self.detector_atual = copy.copy(self.detector_classe(seed=seed))
 
         # atualizando o detector
         self.detector_atual.atualizar(erro_medio)
@@ -107,7 +108,7 @@ class OASIS(AvaliadorDriftBase):
         if len(self.pool) < self.len_pool:
             self.pool.append(modelo)
             
-        else:
+        elif(self.pool_exclusion == "performance"):
 
             # Avaliar erros dos modelos no pool
             erros_pool = [
@@ -120,6 +121,10 @@ class OASIS(AvaliadorDriftBase):
             # Se o modelo novo for melhor, substitui o pior
             if erro_novo < pior_erro:
                 self.pool[pior_idx] = modelo
+                
+        elif(self.pool_exclusion == "time"):
+            self.pool.append(modelo)
+            self.pool.pop(0)
 
     def popular_pool(self, x, y):
 
@@ -144,7 +149,7 @@ class OASIS(AvaliadorDriftBase):
                 self.modelo_atual = copy.copy(modelo)
                 performance_base = performance
 
-    def prequential(self, X, Y, tamanho_batch, model_classe=None, detect_classe=None):
+    def prequential(self, X, Y, tamanho_batch, model_classe=None, detect_classe=None, seed=None):
         """
         Realiza a previsão de valores continuamente para algoritmos online,
         sem detecção de drift e retreinamento.
@@ -165,7 +170,7 @@ class OASIS(AvaliadorDriftBase):
         mae = metrics.MAE()
 
         # inicializacao do modelo
-        self.inicializar_modelos(X[:tamanho_batch], Y[:tamanho_batch])
+        self.inicializar_modelos(X[:tamanho_batch], Y[:tamanho_batch], seed)
         self.inicializar_pool()
         self.inicializar_janela()
 
