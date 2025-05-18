@@ -6,10 +6,10 @@ import numpy as np
 import copy
 
 class LOR(AvaliadorDriftBase):
-    def __init__(self, modelo_classe, detector_classe, incremental=False):
+    def __init__(self, modelo_classe, detector_classe, reset='unique'):
         self.modelo_classe = modelo_classe
         self.detector_classe = detector_classe
-        self.incremental = incremental
+        self.reset = reset
                     
     def inicializar_modelos(self, X, y, seed):
                 
@@ -103,9 +103,9 @@ class LOR(AvaliadorDriftBase):
                         
                 self.incrementar_janela(X[i], Y[i])
                 
-                if(self.incremental):
+                if(self.reset == 'incremental'):
                     self.modelo_atual.treinar(self.increment_window_X, self.increment_window_y)
-                else:
+                elif(self.reset == 'unique'):
                     self.modelo_atual.treinar([X[i]], [Y[i]])    
                 
                 # resetando o modelo apos o preenchimento do batch
