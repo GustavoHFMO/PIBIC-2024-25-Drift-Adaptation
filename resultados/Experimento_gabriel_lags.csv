@@ -59,7 +59,6 @@ BVSP,LOR - incremental - 3 - lags,27,0.016183123170787985,13
 BVSP,LOR - incremental - 3 - lags,28,0.01696753454011325,14
 BVSP,LOR - incremental - 3 - lags,29,0.01706948990358311,14
 BVSP,LOR - incremental - 3 - lags,30,0.017466998968793546,12
-serie,modelo,repeticao,mae,qtd_deteccoes
 BVSP,LR + KSWIN - 3 - lags,1,0.01593692322725326,15
 BVSP,LR + KSWIN - 3 - lags,2,0.016155526778533675,11
 BVSP,LR + KSWIN - 3 - lags,3,0.01749227344181326,12
